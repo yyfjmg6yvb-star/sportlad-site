@@ -1,0 +1,91 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = "Tips, Takes & Banter — real opinions, real picks, real accountability." } = Astro.props;
+const currentPath = Astro.url.pathname;
+
+const navItems = [
+  { label: 'Takes', href: '/takes/' },
+  { label: 'Tips', href: '/tips/' },
+  { label: 'Games', href: '/games/' },
+  { label: 'Community', href: '/community/' },
+  { label: 'Tools', href: '/tools/' },
+  { label: 'Shop', href: '/shop/' },
+];
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title} · Sportlad</title>
+  <meta name="description" content={description} />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="logo" href="/">Sport<span>lad</span></a>
+      <nav class="main-nav">
+        {navItems.map((item) => (
+          <a href={item.href} class:list={{ active: currentPath.startsWith(item.href) }}>{item.label}</a>
+        ))}
+      </nav>
+      <div class="search-box">
+        <form action="/takes/" method="get">
+          <input type="search" name="q" placeholder="Search Sportlad…" />
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <slot />
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <h4>Takes</h4>
+        <a href="/takes/?sport=football">Football</a><br/>
+        <a href="/takes/?sport=boxing">Boxing</a><br/>
+        <a href="/takes/?sport=f1">F1</a><br/>
+        <a href="/takes/?sport=horse-racing">Horse Racing</a>
+      </div>
+      <div>
+        <h4>Tips</h4>
+        <a href="/tips/">Today's Picks</a><br/>
+        <a href="/tips/#track-record">Track Record</a><br/>
+        <a href="/tips/#join">Join the Paid Group</a>
+      </div>
+      <div>
+        <h4>Learn</h4>
+        <a href="/takes/?type=education">What is BTTS?</a><br/>
+        <a href="/takes/?type=education">Staking 101</a><br/>
+        <a href="/takes/?type=education">Value Betting Explained</a>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <a href="/community/">Join Telegram</a><br/>
+        <a href="/community/#rules">House Rules</a><br/>
+        <a href="/community/#chris">Meet Chris</a>
+      </div>
+      <div>
+        <h4>More</h4>
+        <a href="/tools/">Tools</a><br/>
+        <a href="/games/">Games</a><br/>
+        <a href="/shop/">Shop</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>Sportlad — Tips, Takes &amp; Banter. 18+. Please gamble responsibly — <a href="https://www.begambleaware.org" target="_blank" rel="noopener">BeGambleAware.org</a>.</p>
+    </div>
+  </footer>
+</body>
+</html>
