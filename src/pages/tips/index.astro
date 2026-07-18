@@ -2,6 +2,11 @@
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 
+// Static content-collection picks are kept as an instant, no-JS fallback (and as
+// what renders if the backend isn't deployed yet). Once the Replit backend is live,
+// the <script> below overwrites this with real, automatically-settled data fetched
+// from PUBLIC_API_BASE — set that env var in the Cloudflare Pages project settings
+// once you have a backend URL (see sportlad-backend/README.md).
 const allTips = (await getCollection('tips')).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 const pending = allTips.filter((t) => t.data.result === 'pending');
 const settled = allTips.filter((t) => t.data.result !== 'pending');
@@ -16,26 +21,29 @@ const voids = settled.filter((t) => t.data.result === 'void').length;
     Odds are locked the second a pick goes out and never changed afterwards.
   </p>
 
-  <div class="tool-card" style="margin-top: 24px; display: flex; gap: 32px; flex-wrap: wrap;">
-    <div><strong style="font-size:1.4rem;">{wins}</strong><br/><span style="color:var(--muted); font-size:0.85rem;">WINS</span></div>
-    <div><strong style="font-size:1.4rem;">{losses}</strong><br/><span style="color:var(--muted); font-size:0.85rem;">LOSSES</span></div>
-    <div><strong style="font-size:1.4rem;">{voids}</strong><br/><span style="color:var(--muted); font-size:0.85rem;">VOID</span></div>
-    <div><strong style="font-size:1.4rem;">{settled.length ? Math.round((wins / settled.length) * 100) : 0}%</strong><br/><span style="color:var(--muted); font-size:0.85rem;">STRIKE RATE</span></div>
+  <div class="tool-card" id="stats-card" style="margin-top: 24px; display: flex; gap: 32px; flex-wrap: wrap;">
+    <div><strong style="font-size:1.4rem;" id="stat-wins">{wins}</strong><br/><span style="color:var(--muted); font-size:0.85rem;">WINS</span></div>
+    <div><strong style="font-size:1.4rem;" id="stat-losses">{losses}</strong><br/><span style="color:var(--muted); font-size:0.85rem;">LOSSES</span></div>
+    <div><strong style="font-size:1.4rem;" id="stat-void">{voids}</strong><br/><span style="color:var(--muted); font-size:0.85rem;">VOID</span></div>
+    <div><strong style="font-size:1.4rem;" id="stat-strike-rate">{settled.length ? Math.round((wins / settled.length) * 100) : 0}%</strong><br/><span style="color:var(--muted); font-size:0.85rem;">STRIKE RATE</span></div>
   </div>
+  <p id="stats-source" style="color: var(--muted); font-size: 0.75rem; margin-top: 6px;">Loading live track record…</p>
 
   <div class="section-head" id="track-record"><h2>Today's Picks</h2></div>
-  {pending.length === 0 && <p style="color: var(--muted);">Nothing posted yet today — check Telegram for the latest.</p>}
-  {pending.map((t) => (
-    <div class="pick-card">
-      <div class="fixture">{t.data.fixture}</div>
-      <div class="details">
-        {t.data.competition && <>{t.data.competition} · </>}
-        {t.data.market} — {t.data.selection}
-        <span class="odds-badge">{t.data.odds}</span>
+  <div id="todays-picks">
+    {pending.length === 0 && <p style="color: var(--muted);">Nothing posted yet today — check Telegram for the latest.</p>}
+    {pending.map((t) => (
+      <div class="pick-card">
+        <div class="fixture">{t.data.fixture}</div>
+        <div class="details">
+          {t.data.competition && <>{t.data.competition} · </>}
+          {t.data.market} — {t.data.selection}
+          <span class="odds-badge">{t.data.odds}</span>
+        </div>
+        <span class:list={["result-tag", t.data.result]}>{t.data.result}</span>
       </div>
-      <span class:list={["result-tag", t.data.result]}>{t.data.result}</span>
-    </div>
-  ))}
+    ))}
+  </div>
 
   <div class="section-head"><h2>Recent Results</h2></div>
   {settled.map((t) => (
@@ -51,8 +59,83 @@ const voids = settled.filter((t) => t.data.result === 'void').length;
   <div class="community-strip">
     <div>
       <strong>£20/month · cancel anytime</strong>
-      <p style="color: var(--muted); margin: 4px 0 0;">Daily picks, live matchday threads, Wins &amp; Losses feed, monthly "why we got it wrong" retro.</p>
+      <p style="color: var(--muted); margin: 4px 0 0;">Daily picks, live matchday threads, Wins &amp; Losses feed, monthly "why we got it wrong" retro. Odds locked at the moment each pick goes out — never adjusted after the fact.</p>
     </div>
-    <a class="btn" href="/community/">Join now →</a>
+    <button class="btn" id="join-btn">Join now →</button>
   </div>
+  <p id="join-status" style="color: var(--muted); font-size: 0.8rem;"></p>
 </Layout>
+
+<script define:vars={{ apiBase: import.meta.env.PUBLIC_API_BASE || '' }}>
+  // Progressive enhancement: the page above already renders from the static content
+  // collection, so there's never a blank state. If a live backend is configured
+  // (PUBLIC_API_BASE set in Cloudflare Pages env vars), this overwrites it with the
+  // real, automatically-updating numbers/picks.
+  async function loadLiveTips() {
+    const statusEl = document.getElementById('stats-source');
+    if (!apiBase) {
+      statusEl.textContent = 'Showing manually-posted picks (live backend not connected yet).';
+      return;
+    }
+
+    try {
+      const [trackRes, tipsRes] = await Promise.all([
+        fetch(`${apiBase}/api/track-record`),
+        fetch(`${apiBase}/api/tips/today`),
+      ]);
+      if (!trackRes.ok || !tipsRes.ok) throw new Error('backend returned an error');
+
+      const track = await trackRes.json();
+      const todaysTips = await tipsRes.json();
+
+      document.getElementById('stat-wins').textContent = track.wins;
+      document.getElementById('stat-losses').textContent = track.losses;
+      document.getElementById('stat-void').textContent = track.void;
+      document.getElementById('stat-strike-rate').textContent = `${track.strikeRate}%`;
+      statusEl.textContent = 'Live — settled automatically as results come in.';
+
+      const container = document.getElementById('todays-picks');
+      if (todaysTips.length === 0) {
+        container.innerHTML = '<p style="color: var(--muted);">Nothing posted yet today — check Telegram for the latest.</p>';
+      } else {
+        container.innerHTML = todaysTips
+          .map(
+            (t) => `
+          <div class="pick-card">
+            <div class="fixture">${t.fixture}</div>
+            <div class="details">
+              ${t.competition ? t.competition + ' · ' : ''}${t.market} — ${t.selection}
+              <span class="odds-badge">${t.odds_locked}</span>
+            </div>
+            <span class="result-tag ${t.result}">${t.result}</span>
+          </div>`
+          )
+          .join('');
+      }
+    } catch (err) {
+      statusEl.textContent = 'Showing manually-posted picks (live backend unreachable).';
+      console.error('[tips] live fetch failed:', err);
+    }
+  }
+
+  async function handleJoin() {
+    const statusEl = document.getElementById('join-status');
+    if (!apiBase) {
+      window.location.href = '/community/';
+      return;
+    }
+    statusEl.textContent = 'Redirecting to checkout…';
+    try {
+      const res = await fetch(`${apiBase}/api/checkout`, { method: 'POST' });
+      if (!res.ok) throw new Error('checkout session failed');
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch (err) {
+      statusEl.textContent = "Couldn't start checkout — try the Community page instead.";
+      console.error('[tips] checkout failed:', err);
+    }
+  }
+
+  document.getElementById('join-btn').addEventListener('click', handleJoin);
+  loadLiveTips();
+</script>
