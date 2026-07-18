@@ -1,0 +1,73 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const allArticles = (await getCollection('articles')).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const takes = allArticles.filter((a) => a.data.contentType === 'opinion').slice(0, 3);
+const heroArticle = allArticles.find((a) => a.data.pinned) ?? allArticles[0];
+
+const allTips = (await getCollection('tips')).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const latestTips = allTips.slice(0, 3);
+const settled = allTips.filter((t) => t.data.result === 'win' || t.data.result === 'loss');
+const wins = settled.filter((t) => t.data.result === 'win').length;
+---
+<Layout title="Home">
+  <section class="hero">
+    <p class="eyebrow">Today's Headline</p>
+    <h1><a href={`/takes/${heroArticle.slug}/`} style="color: inherit; text-decoration: none;">{heroArticle.data.title}</a></h1>
+    <p>{heroArticle.data.description}</p>
+    <a class="btn" href={`/takes/${heroArticle.slug}/`}>Read the take →</a>
+  </section>
+
+  <div class="section-head">
+    <h2>Takes</h2>
+    <a class="see-all" href="/takes/">See all →</a>
+  </div>
+  <div class="card-grid">
+    {takes.map((a) => (
+      <div class="card">
+        <span class:list={["tag", a.data.contentType]}>{a.data.sport}</span>
+        <h3><a href={`/takes/${a.slug}/`}>{a.data.title}</a></h3>
+        <p>{a.data.description}</p>
+        <div class="meta">{a.data.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
+      </div>
+    ))}
+  </div>
+
+  <div class="section-head">
+    <h2>Tips</h2>
+    <a class="see-all" href="/tips/">See all →</a>
+  </div>
+  <p style="color: var(--muted); margin-top: -12px;">
+    Track record so far: <strong>{wins}/{settled.length}</strong> settled picks won.
+    Every pick posted with odds locked at the moment it went out — no recalculating after the fact.
+  </p>
+  {latestTips.map((t) => (
+    <div class="pick-card">
+      <div class="fixture">{t.data.fixture}</div>
+      <div class="details">{t.data.market} — {t.data.selection} <span class="odds-badge">{t.data.odds}</span></div>
+      <span class:list={["result-tag", t.data.result]}>{t.data.result}</span>
+    </div>
+  ))}
+
+  <div class="section-head">
+    <h2>Games</h2>
+    <a class="see-all" href="/games/">See all →</a>
+  </div>
+  <div class="tool-card">
+    <p><strong>Free prediction game — coming soon.</strong> Weekly curated fixtures, monthly leaderboard, top prize: 12 months free membership. Launching once the community's up and running — join Telegram to get first access.</p>
+    <a class="btn ghost" href="/games/">See how it'll work →</a>
+  </div>
+
+  <div class="section-head">
+    <h2>Community</h2>
+    <a class="see-all" href="/community/">See all →</a>
+  </div>
+  <div class="community-strip">
+    <div>
+      <strong>Join the free Telegram group</strong>
+      <p style="color: var(--muted); margin: 4px 0 0;">Banter, one free tip a week, and the actual bloke behind Sportlad — not a bot.</p>
+    </div>
+    <a class="btn" href="/community/">Join now →</a>
+  </div>
+</Layout>
