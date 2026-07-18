@@ -1,0 +1,89 @@
+---
+// NOTE: this site builds to static HTML (Cloudflare Pages, no server).
+// Filtering by ?sport=/?type= can't happen at build time — a static page
+// can't know the query string a visitor typed. So we render every article
+// with data attributes and filter client-side with the small script below.
+// The query string still works fine for links/bookmarks/sharing.
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const articles = (await getCollection('articles')).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const editorsPicks = articles.filter((a) => a.data.editorsPick);
+
+const sports = ['football', 'boxing', 'f1', 'horse-racing', 'tennis', 'darts', 'general'];
+const types = [
+  { key: 'opinion', label: 'Takes' },
+  { key: 'education', label: 'Guides' },
+  { key: 'data-story', label: 'Data' },
+];
+---
+<Layout title="Takes" description="Hot takes, reactions, and honest opinion on football, boxing, F1 and more — plus the evergreen guides and data stories, all in one place.">
+  <h1 style="margin-top: 32px;">Takes</h1>
+  <p style="color: var(--muted); max-width: 60ch;">Opinion, reaction, and the odd rant — plus the guides and stat-led pieces that live alongside them. Filter by sport or type below.</p>
+
+  {editorsPicks.length > 0 && (
+    <div id="editors-picks-block">
+      <div class="section-head"><h2>Editor's Picks</h2></div>
+      <div class="card-grid">
+        {editorsPicks.map((a) => (
+          <div class="card">
+            <span class:list={["tag", a.data.contentType]}>{a.data.sport}</span>
+            <h3><a href={`/takes/${a.slug}/`}>{a.data.title}</a></h3>
+            <p>{a.data.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <div class="tag-filter" style="margin-top: 32px;">
+    <a href="/takes/" data-filter-type="all" class="active">All</a>
+    {types.map((t) => (
+      <a href={`/takes/?type=${t.key}`} data-filter-type={t.key}>{t.label}</a>
+    ))}
+  </div>
+  <div class="tag-filter">
+    <a href="/takes/" data-filter-sport="all" class="active">All sports</a>
+    {sports.map((s) => (
+      <a href={`/takes/?sport=${s}`} data-filter-sport={s}>{s.replace('-', ' ')}</a>
+    ))}
+  </div>
+
+  <div class="section-head"><h2 id="list-heading">Latest</h2></div>
+  <div class="card-grid" id="article-grid">
+    {articles.map((a) => (
+      <div class="card" data-sport={a.data.sport} data-type={a.data.contentType}>
+        <span class:list={["tag", a.data.contentType]}>{a.data.sport}</span>
+        <h3><a href={`/takes/${a.slug}/`}>{a.data.title}</a></h3>
+        <p>{a.data.description}</p>
+        <div class="meta">{a.data.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+      </div>
+    ))}
+  </div>
+  <p id="empty-state" style="display:none; color: var(--muted);">Nothing matches that filter yet — check back soon.</p>
+</Layout>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const sport = params.get('sport');
+  const type = params.get('type');
+  const cards = document.querySelectorAll('#article-grid .card');
+  let visibleCount = 0;
+
+  cards.forEach((card) => {
+    const matchesSport = !sport || card.getAttribute('data-sport') === sport;
+    const matchesType = !type || card.getAttribute('data-type') === type;
+    const show = matchesSport && matchesType;
+    (card as HTMLElement).style.display = show ? '' : 'none';
+    if (show) visibleCount++;
+  });
+
+  document.getElementById('empty-state')!.style.display = visibleCount === 0 ? 'block' : 'none';
+
+  document.querySelectorAll('[data-filter-sport]').forEach((el) => {
+    el.classList.toggle('active', el.getAttribute('data-filter-sport') === (sport ?? 'all'));
+  });
+  document.querySelectorAll('[data-filter-type]').forEach((el) => {
+    el.classList.toggle('active', el.getAttribute('data-filter-type') === (type ?? 'all'));
+  });
+</script>
