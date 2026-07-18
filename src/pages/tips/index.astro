@@ -1,0 +1,58 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const allTips = (await getCollection('tips')).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const pending = allTips.filter((t) => t.data.result === 'pending');
+const settled = allTips.filter((t) => t.data.result !== 'pending');
+const wins = settled.filter((t) => t.data.result === 'win').length;
+const losses = settled.filter((t) => t.data.result === 'loss').length;
+const voids = settled.filter((t) => t.data.result === 'void').length;
+---
+<Layout title="Tips" description="Daily picks from Chris, posted under his own name with odds locked at the moment of posting. Public track record, always visible.">
+  <h1 style="margin-top: 32px;">Tips</h1>
+  <p style="color: var(--muted); max-width: 60ch;">
+    Real picks, posted under my own name, with the reasoning included — not just a bet and a prayer.
+    Odds are locked the second a pick goes out and never changed afterwards.
+  </p>
+
+  <div class="tool-card" style="margin-top: 24px; display: flex; gap: 32px; flex-wrap: wrap;">
+    <div><strong style="font-size:1.4rem;">{wins}</strong><br/><span style="color:var(--muted); font-size:0.85rem;">WINS</span></div>
+    <div><strong style="font-size:1.4rem;">{losses}</strong><br/><span style="color:var(--muted); font-size:0.85rem;">LOSSES</span></div>
+    <div><strong style="font-size:1.4rem;">{voids}</strong><br/><span style="color:var(--muted); font-size:0.85rem;">VOID</span></div>
+    <div><strong style="font-size:1.4rem;">{settled.length ? Math.round((wins / settled.length) * 100) : 0}%</strong><br/><span style="color:var(--muted); font-size:0.85rem;">STRIKE RATE</span></div>
+  </div>
+
+  <div class="section-head" id="track-record"><h2>Today's Picks</h2></div>
+  {pending.length === 0 && <p style="color: var(--muted);">Nothing posted yet today — check Telegram for the latest.</p>}
+  {pending.map((t) => (
+    <div class="pick-card">
+      <div class="fixture">{t.data.fixture}</div>
+      <div class="details">
+        {t.data.competition && <>{t.data.competition} · </>}
+        {t.data.market} — {t.data.selection}
+        <span class="odds-badge">{t.data.odds}</span>
+      </div>
+      <span class:list={["result-tag", t.data.result]}>{t.data.result}</span>
+    </div>
+  ))}
+
+  <div class="section-head"><h2>Recent Results</h2></div>
+  {settled.map((t) => (
+    <div class="pick-card">
+      <div class="fixture">{t.data.fixture}</div>
+      <div class="details">{t.data.market} — {t.data.selection} <span class="odds-badge">{t.data.odds}</span></div>
+      <span class:list={["result-tag", t.data.result]}>{t.data.result}</span>
+    </div>
+  ))}
+  {settled.length === 0 && <p style="color: var(--muted);">Track record builds from day one — first results will land here as picks settle.</p>}
+
+  <div class="section-head" id="join"><h2>Join the Paid Group</h2></div>
+  <div class="community-strip">
+    <div>
+      <strong>£20/month · cancel anytime</strong>
+      <p style="color: var(--muted); margin: 4px 0 0;">Daily picks, live matchday threads, Wins &amp; Losses feed, monthly "why we got it wrong" retro.</p>
+    </div>
+    <a class="btn" href="/community/">Join now →</a>
+  </div>
+</Layout>
