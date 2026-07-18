@@ -1,0 +1,81 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+<Layout title="Tools" description="Staking calculator, odds converter, and more — simple tools for smarter betting decisions.">
+  <h1 style="margin-top: 32px;">Tools</h1>
+  <p style="color: var(--muted); max-width: 60ch;">Simple, clearly-labelled tools — no sign-up required. More get added over time (bet builder is next).</p>
+
+  <div class="section-head"><h2>Staking Calculator</h2></div>
+  <div class="tool-card">
+    <p style="color: var(--muted); margin-top: 0;">Work out potential returns from odds and stake. Decimal odds only for now.</p>
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; margin: 16px 0;">
+      <label style="flex: 1; min-width: 140px;">
+        Stake (£)
+        <input id="stake" type="number" value="10" min="0" step="0.5" style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 6px;" />
+      </label>
+      <label style="flex: 1; min-width: 140px;">
+        Odds (decimal)
+        <input id="odds" type="number" value="1.90" min="1" step="0.01" style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 6px;" />
+      </label>
+    </div>
+    <p style="font-size: 1.1rem;">
+      Potential profit: <strong id="profit">£9.00</strong> ·
+      Total return: <strong id="return">£19.00</strong>
+    </p>
+    <p style="color: var(--muted); font-size: 0.8rem; margin-bottom: 0;">Illustrative only — doesn't account for each-way terms, void rules, or bookmaker-specific adjustments.</p>
+  </div>
+
+  <div class="section-head"><h2>Odds Converter</h2></div>
+  <div class="tool-card">
+    <p style="color: var(--muted); margin-top: 0;">Convert fractional odds to decimal.</p>
+    <div style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+      <label style="flex: 1; min-width: 140px;">
+        Fractional (e.g. 9/2)
+        <input id="fractional" type="text" value="9/2" style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 6px;" />
+      </label>
+      <p style="margin: 0;">Decimal: <strong id="decimal-result">5.50</strong></p>
+    </div>
+  </div>
+
+  <div class="section-head"><h2>Coming Soon</h2></div>
+  <div class="card-grid">
+    <div class="card"><span class="tag">Soon</span><h3>Best-Price Comparison</h3><p>Compare odds across bookmakers for a given fixture/market.</p></div>
+    <div class="card"><span class="tag">Soon</span><h3>Bet Builder</h3><p>Combine markets on a single fixture with a live combined price.</p></div>
+  </div>
+</Layout>
+
+<script>
+  const stakeEl = document.getElementById('stake') as HTMLInputElement;
+  const oddsEl = document.getElementById('odds') as HTMLInputElement;
+  const profitEl = document.getElementById('profit')!;
+  const returnEl = document.getElementById('return')!;
+
+  function recalc() {
+    const stake = parseFloat(stakeEl.value) || 0;
+    const odds = parseFloat(oddsEl.value) || 0;
+    const totalReturn = stake * odds;
+    const profit = totalReturn - stake;
+    profitEl.textContent = `£${profit.toFixed(2)}`;
+    returnEl.textContent = `£${totalReturn.toFixed(2)}`;
+  }
+  stakeEl.addEventListener('input', recalc);
+  oddsEl.addEventListener('input', recalc);
+  recalc();
+
+  const fractionalEl = document.getElementById('fractional') as HTMLInputElement;
+  const decimalResultEl = document.getElementById('decimal-result')!;
+  function recalcFractional() {
+    const parts = fractionalEl.value.split('/');
+    if (parts.length === 2) {
+      const num = parseFloat(parts[0]);
+      const denom = parseFloat(parts[1]);
+      if (denom > 0 && !isNaN(num)) {
+        decimalResultEl.textContent = (num / denom + 1).toFixed(2);
+        return;
+      }
+    }
+    decimalResultEl.textContent = '—';
+  }
+  fractionalEl.addEventListener('input', recalcFractional);
+  recalcFractional();
+</script>
