@@ -1,0 +1,47 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const articles = await getCollection('articles');
+  return articles.map((article) => ({
+    params: { slug: article.slug },
+    props: { article },
+  }));
+}
+
+const { article } = Astro.props;
+const { Content } = await article.render();
+
+const allArticles = (await getCollection('articles')).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const related = allArticles
+  .filter((a) => a.slug !== article.slug && a.data.sport === article.data.sport)
+  .slice(0, 3);
+---
+<Layout title={article.data.title} description={article.data.description}>
+  <div style="max-width: 68ch; margin-top: 32px;">
+    <span class:list={["tag", article.data.contentType]}>{article.data.sport}</span>
+    <h1>{article.data.title}</h1>
+    <p class="byline">
+      By Chris · {article.data.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+    </p>
+    <div class="prose">
+      <Content />
+    </div>
+  </div>
+
+  {related.length > 0 && (
+    <>
+      <div class="section-head"><h2>Related</h2></div>
+      <div class="card-grid">
+        {related.map((a) => (
+          <div class="card">
+            <span class:list={["tag", a.data.contentType]}>{a.data.sport}</span>
+            <h3><a href={`/takes/${a.slug}/`}>{a.data.title}</a></h3>
+            <p>{a.data.description}</p>
+          </div>
+        ))}
+      </div>
+    </>
+  )}
+</Layout>
